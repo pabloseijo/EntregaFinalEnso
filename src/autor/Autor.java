@@ -1,6 +1,6 @@
-package modelo;
+package autor;
 
-public class Autor {
+public class Autor implements IAutor{
 	private final int idAutor;
     private final String nombre;
 

@@ -1,12 +1,14 @@
-package modelo;
+package usuario;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class Usuario {
+import cancion.ICancion;
+
+public class Usuario implements IUsuario {
     private final String nombreUsuario;
-    private final List<Cancion> cancionesEscuchadas;
+    private final List<ICancion> cancionesEscuchadas;
 
     public Usuario(String nombreUsuario) {
         if (nombreUsuario == null || nombreUsuario.isBlank()) {
@@ -16,18 +18,21 @@ public class Usuario {
         this.cancionesEscuchadas = new ArrayList<>();
     }
 
+    @Override
     public String getNombreUsuario() {
         return nombreUsuario;
     }
 
-    public void escucharCancion(Cancion cancion) {
+    @Override
+    public void escucharCancion(ICancion cancion) {
         if (cancion == null) {
             throw new IllegalArgumentException("La canción no puede ser nula.");
         }
         cancionesEscuchadas.add(cancion);
     }
 
-    public List<Cancion> getCancionesEscuchadas() {
+    @Override
+    public List<ICancion> getCancionesEscuchadas() {
         return Collections.unmodifiableList(cancionesEscuchadas);
     }
 }

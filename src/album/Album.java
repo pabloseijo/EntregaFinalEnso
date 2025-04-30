@@ -1,16 +1,19 @@
-package modelo;
+package album;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class Album {
-	private final int idAlbum;
-    private final String nombre;
-    private final Autor autor;
-    private final List<Cancion> canciones;
+import autor.IAutor;
+import cancion.ICancion;
 
-    public Album(int idAlbum, String nombre, Autor autor) {
+public class Album implements IAlbum {
+    private final int idAlbum;
+    private final String nombre;
+    private final IAutor autor;
+    private final List<ICancion> canciones;
+
+    public Album(int idAlbum, String nombre, IAutor autor) {
         if (nombre == null || nombre.isBlank()) {
             throw new IllegalArgumentException("El nombre del álbum no puede ser nulo o vacío.");
         }
@@ -23,19 +26,23 @@ public class Album {
         this.canciones = new ArrayList<>();
     }
 
+    @Override
     public int getIdAlbum() {
         return idAlbum;
     }
 
+    @Override
     public String getNombre() {
         return nombre;
     }
 
-    public Autor getAutor() {
+    @Override
+    public IAutor getAutor() {
         return autor;
     }
 
-    public void agregarCancion(Cancion cancion) {
+    @Override
+    public void agregarCancion(ICancion cancion) {
         if (cancion == null) {
             throw new IllegalArgumentException("La canción no puede ser nula.");
         }
@@ -45,7 +52,8 @@ public class Album {
         canciones.add(cancion);
     }
 
-    public List<Cancion> getCanciones() {
+    @Override
+    public List<ICancion> getCanciones() {
         return Collections.unmodifiableList(canciones);
     }
 }

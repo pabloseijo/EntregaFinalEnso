@@ -1,12 +1,14 @@
-package modelo;
+package cancion;
 
-public class Cancion {
-	private final int idCancion;
+import album.IAlbum;
+
+public class Cancion implements ICancion {
+    private final int idCancion;
     private final String nombre;
     private final int duracion; // en segundos
-    private final Album album;
+    private final IAlbum album;
 
-    public Cancion(int idCancion, String nombre, int duracion, Album album) {
+    public Cancion(int idCancion, String nombre, int duracion, IAlbum album) {
         if (nombre == null || nombre.isBlank()) {
             throw new IllegalArgumentException("El nombre de la canción no puede ser nulo o vacío.");
         }
@@ -22,19 +24,23 @@ public class Cancion {
         this.album = album;
     }
 
+    @Override
     public int getIdCancion() {
         return idCancion;
     }
 
+    @Override
     public String getNombre() {
         return nombre;
     }
 
+    @Override
     public int getDuracion() {
         return duracion;
     }
 
-    public Album getAlbum() {
+    @Override
+    public IAlbum getAlbum() {
         return album;
     }
 }
