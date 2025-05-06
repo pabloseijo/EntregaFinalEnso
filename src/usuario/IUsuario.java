@@ -1,6 +1,8 @@
 package usuario;
 
 import java.util.List;
+import java.util.Map;
+
 import cancion.ICancion;
 
 public interface IUsuario {
@@ -12,4 +14,7 @@ public interface IUsuario {
     boolean haEscuchadoCancionConNombre(String nombre);
     int getDuracionTotalEscuchada();
     List<String> getResumenDeEscuchas();
+    Map<String, List<String>> agruparCancionesPorNombreDeAlbum();
+    List<String> obtenerResumenCancionesLargasConAlbum(int umbral);
+    public List<ICancion> obtenerCancionesDelAutor(int idAutor);
 }

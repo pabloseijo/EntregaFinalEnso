@@ -3,6 +3,8 @@ package usuario;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import cancion.ICancion;
 
@@ -50,6 +52,16 @@ public class Usuario implements IUsuario {
             .filter(c -> c.getDuracion() > umbralSegundos)
             .toList();
     }
+    
+    @Override
+    public Map<String, List<String>> agruparCancionesPorNombreDeAlbum() {
+        return cancionesEscuchadas.stream()
+            .collect(Collectors.groupingBy(
+                c -> c.getAlbum().getNombre(),
+                Collectors.mapping(ICancion::getNombre, Collectors.toList())
+            ));
+    }
+
 
     @Override
     public boolean haEscuchadoCancionConNombre(String nombre) {
@@ -71,6 +83,28 @@ public class Usuario implements IUsuario {
     public List<String> getResumenDeEscuchas() {
         return cancionesEscuchadas.stream()
             .map(c -> String.format("Canción: %s, Duración: %ds", c.getNombre(), c.getDuracion()))
+            .toList();
+    }
+    
+    @Override
+    public List<String> obtenerResumenCancionesLargasConAlbum(int umbral) {
+        if (umbral <= 0) throw new IllegalArgumentException("Umbral inválido.");
+
+        return cancionesEscuchadas.stream()
+            .filter(c -> c.getDuracion() > umbral)
+            .map(c -> String.format(
+                "Canción %s (%s) - Álbum %s",
+                c.getNombre(),
+                c.getDuracionFormateada(),
+                c.getAlbum().getNombre()
+            ))
+            .toList();
+    }
+
+    @Override
+    public List<ICancion> obtenerCancionesDelAutor(int idAutor) {
+        return cancionesEscuchadas.stream()
+            .filter(c -> c.getAlbum().getAutor().getIdAutor() == idAutor)
             .toList();
     }
 }
