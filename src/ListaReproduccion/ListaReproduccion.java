@@ -37,7 +37,7 @@ public class ListaReproduccion implements IListaReproduccion {
         Map<String, IAutor> autores = new HashMap<>();
         Map<String, IAlbum> albumes = new HashMap<>();
         Map<String, IUsuario> usuarios = new HashMap<>();
-        Map<IUsuario, List<ICancion>> resultado = new LinkedHashMap<>();	// Linked para q mantenga el orden de los usuarios
+        Map<IUsuario, List<ICancion>> resultado = new LinkedHashMap<>();	// Linked para que mantenga el orden de los usuarios
 
         try (BufferedReader br = new BufferedReader(new FileReader(rutaCSV))) {
             String linea = br.readLine(); // encabezado

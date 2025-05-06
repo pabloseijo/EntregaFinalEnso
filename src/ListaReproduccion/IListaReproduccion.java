@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import cancion.ICancion;
-import escucha.IEscucha;
 import usuario.IUsuario;
 
 public interface IListaReproduccion {
