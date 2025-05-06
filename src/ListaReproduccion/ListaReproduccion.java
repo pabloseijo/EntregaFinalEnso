@@ -21,18 +21,30 @@ import usuario.Usuario;
 import escucha.IEscucha;
 import escucha.Escucha;
 
-public class ListaReproduccion {
+public class ListaReproduccion implements IListaReproduccion {
 
-    public Map<IUsuario, List<ICancion>> generarListasPorUsuario(String rutaCSV, List<IEscucha> escuchas) {
+	@Override
+	public int stringASegundos(String duracion) {
+		// Solo admite tiempo en formato "mm:ss"
+		String[] partesDuracion = duracion.split(":");
+        int minutos = Integer.parseInt(partesDuracion[0]);
+        int segundos = Integer.parseInt(partesDuracion[1]);
+        return minutos * 60 + segundos;
+	}
+
+	@Override
+	public Map<IUsuario, List<ICancion>> generarListasPorUsuario(String rutaCSV) {
         Map<String, IAutor> autores = new HashMap<>();
         Map<String, IAlbum> albumes = new HashMap<>();
         Map<String, IUsuario> usuarios = new HashMap<>();
-        Map<IUsuario, List<ICancion>> resultado = new HashMap<>();
+        Map<IUsuario, List<ICancion>> resultado = new LinkedHashMap<>();	// Linked para q mantenga el orden de los usuarios
 
         try (BufferedReader br = new BufferedReader(new FileReader(rutaCSV))) {
             String linea = br.readLine(); // encabezado
 
             while ((linea = br.readLine()) != null) {
+            	if (linea.trim().isEmpty()) continue; // ignorar línea vacía final
+            	
                 String[] columnas = linea.split(",");
 
                 if (columnas.length != 7) {
@@ -51,10 +63,7 @@ public class ListaReproduccion {
                 String nombreCompleto = nombre + " " + apellido;
                 String claveAlbum = artista + "-" + album;
 
-                String[] partesDuracion = duracion.split(":");
-                int minutos = Integer.parseInt(partesDuracion[0]);
-                int segundos = Integer.parseInt(partesDuracion[1]);
-                int duracionSegundos = minutos * 60 + segundos;
+                int duracionSegundos = stringASegundos(duracion);
 
                 // Obtener o crear autor
                 IAutor au = autores.computeIfAbsent(artista, k -> new Autor(k.hashCode(), k));
@@ -73,12 +82,11 @@ public class ListaReproduccion {
                 // Obtener o crear usuario
                 IUsuario u = usuarios.computeIfAbsent(nombreCompleto, k -> new Usuario(k));
 
-                // Agregar canción a la lista del usuario
-                resultado.computeIfAbsent(u, k -> new ArrayList<>()).add(c);
-
                 // Crear escucha
                 IEscucha e = new Escucha(u, c, LocalDateTime.now());
-                escuchas.add(e);
+                
+                // Agregar canción a la lista del usuario
+                resultado.computeIfAbsent(u, k -> new ArrayList<>()).add(c);
             }
 
         } catch (IOException | NumberFormatException | ArrayIndexOutOfBoundsException e) {
@@ -88,7 +96,8 @@ public class ListaReproduccion {
 
         return resultado;
     }
-    
+
+	@Override
     public List<Integer> generarListaReproduccionIntercalada(
     	    Map<IUsuario, List<ICancion>> cancionesPorUsuario,
     	    List<IUsuario> usuariosEnCoche,
@@ -103,11 +112,9 @@ public class ListaReproduccion {
     	        indicesPorUsuario.put(usuario, 0);
     	    }
 
-    	    boolean cancionesDisponibles = true;
-
-    	    while (tiempoAcumulado < maxTiempo && cancionesDisponibles) {
-    	        cancionesDisponibles = false;
-
+    	    while (tiempoAcumulado < maxTiempo) {
+    	        boolean alguienTieneCanciones = false;
+    	        
     	        for (IUsuario usuario : usuariosEnCoche) {
     	            List<ICancion> cancionesUsuario = cancionesPorUsuario.getOrDefault(usuario, List.of());
     	            int indice = indicesPorUsuario.get(usuario);
@@ -124,12 +131,19 @@ public class ListaReproduccion {
     	                tiempoAcumulado += duracion;
 
     	                indicesPorUsuario.put(usuario, indice + 1);
-    	                cancionesDisponibles = true;
+    	                
+    	                alguienTieneCanciones = true;
     	            }
     	        }
+    	        // Si todos los índices han llegado al final, reiniciamos
+    	        if (!alguienTieneCanciones) {
+    	            for (IUsuario usuario : usuariosEnCoche) {
+    	                indicesPorUsuario.put(usuario, 0);
+    	            }
+    	        }
+    	        
     	    }
-
+    	    // Lista con el ID de las canciones que da tiempo a poner
     	    return listaGlobal;
     	}
-a
 }
