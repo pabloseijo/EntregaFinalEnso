@@ -2,6 +2,7 @@ package ListaReproduccion;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import cancion.ICancion;
 import usuario.IUsuario;
@@ -9,5 +10,7 @@ import usuario.IUsuario;
 public interface IListaReproduccion {
 	public int stringASegundos(String duracion);
 	public Map<IUsuario, List<ICancion>> generarListasPorUsuario(String rutaCSV);
-	public List<Integer> generarListaReproduccionIntercalada(Map<IUsuario, List<ICancion>> cancionesPorUsuario, List<IUsuario> usuariosEnCoche, int maxTiempo) ;
+	public int calcularDuracion(List<ICancion> canciones);
+	public List<ICancion> intercalarCanciones(Map<IUsuario, List<ICancion>> listasUsuario, Set<IUsuario> usuariosEnCoche);
+	public List<Integer> generarListaReproduccionIntercalada(String rutaCSV, Set<IUsuario> usuariosEnCoche, int maxTiempo);
 }

@@ -3,7 +3,6 @@ package ListaReproduccion;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.*;
 
 import autor.IAutor;
@@ -17,9 +16,6 @@ import cancion.Cancion;
 
 import usuario.IUsuario;
 import usuario.Usuario;
-
-import escucha.IEscucha;
-import escucha.Escucha;
 
 public class ListaReproduccion implements IListaReproduccion {
 
@@ -46,11 +42,6 @@ public class ListaReproduccion implements IListaReproduccion {
             	if (linea.trim().isEmpty()) continue; // ignorar línea vacía final
             	
                 String[] columnas = linea.split(",");
-
-                if (columnas.length != 7) {
-                    System.err.println("Línea con formato inválido: " + linea);
-                    continue;
-                }
 
                 int id = Integer.parseInt(columnas[0].trim());
                 String nombre = columnas[1].trim();
@@ -81,9 +72,6 @@ public class ListaReproduccion implements IListaReproduccion {
 
                 // Obtener o crear usuario
                 IUsuario u = usuarios.computeIfAbsent(nombreCompleto, k -> new Usuario(k));
-
-                // Crear escucha
-                IEscucha e = new Escucha(u, c, LocalDateTime.now());
                 
                 // Agregar canción a la lista del usuario
                 resultado.computeIfAbsent(u, k -> new ArrayList<>()).add(c);
@@ -98,52 +86,92 @@ public class ListaReproduccion implements IListaReproduccion {
     }
 
 	@Override
+	public List<ICancion> intercalarCanciones(Map<IUsuario, List<ICancion>> listasUsuario, Set<IUsuario> usuariosEnCoche){
+	    // Lista que almacenará el resultado de una "ronda" de intercalación
+		List<ICancion> cancionesIntercaladas = new ArrayList<>();
+	    // Mapa que mantiene el índice actual de cada usuario (cuántas canciones suyas ya se han intercalado)
+		Map<IUsuario, Integer> indicesPorUsuario = new HashMap<>();
+	    
+	    // Si no se especifican los usuarios, se usan todos los del CSV
+	    if(usuariosEnCoche == null || usuariosEnCoche.isEmpty()) {
+			usuariosEnCoche = listasUsuario.keySet();
+	    }
+	
+		// Inicializar índices por usuario
+	    for (IUsuario usuario : usuariosEnCoche) {
+	        indicesPorUsuario.put(usuario, 0);
+	    }
+
+	    boolean cancionesPendientes = true;
+
+	    // Mientras haya al menos una canción pendiente para cualquier usuario
+	    while (cancionesPendientes) {
+	        cancionesPendientes = false;
+
+		    // Esta parte realiza una única ronda de intercalación:
+		    // Añade la siguiente canción disponible (si existe) de cada usuario
+		    for (IUsuario usuario : usuariosEnCoche) {
+		        List<ICancion> cancionesUsuario = listasUsuario.getOrDefault(usuario, List.of());
+		        int indice = indicesPorUsuario.get(usuario);
+		        
+		        // Si aún quedan canciones por intercalar para este usuario...
+		        if (indice < cancionesUsuario.size()) {
+		            ICancion cancion = cancionesUsuario.get(indice);
+	
+		            cancionesIntercaladas.add(cancion);
+	
+		            indicesPorUsuario.put(usuario, indice + 1);	 
+		            
+		            cancionesPendientes = true;
+		        }
+		    }	
+	    }
+	    return cancionesIntercaladas;
+	}
+		
+	@Override
+	public int calcularDuracion(List<ICancion> canciones) {
+		int duracion = 0;
+		for(ICancion cancion : canciones) {
+			duracion += cancion.getDuracion();
+		}
+		
+		return duracion;
+	}
+	
+	@Override
     public List<Integer> generarListaReproduccionIntercalada(
-    	    Map<IUsuario, List<ICancion>> cancionesPorUsuario,
-    	    List<IUsuario> usuariosEnCoche,
+    	    String rutaCSV,
+    	    Set<IUsuario> usuariosEnCoche,
     	    int maxTiempo
     	) {
     	    List<Integer> listaGlobal = new ArrayList<>();
-    	    Map<IUsuario, Integer> indicesPorUsuario = new HashMap<>();
-    	    int tiempoAcumulado = 0;
+    	    List<ICancion> cancionesResultado = new ArrayList<>();
+    	    List<ICancion> cancionesIntercaladas = new ArrayList<>();
+    	    
+    	    Map<IUsuario, List<ICancion>> cancionesPorUsuario = generarListasPorUsuario(rutaCSV);
 
-    	    // Inicializar índices por usuario
-    	    for (IUsuario usuario : usuariosEnCoche) {
-    	        indicesPorUsuario.put(usuario, 0);
+    	    // Si no se especifican los usuarios, se usan todos los del CSV
+    	    if(usuariosEnCoche == null || usuariosEnCoche.isEmpty()) {
+    			usuariosEnCoche = cancionesPorUsuario.keySet();
     	    }
-
-    	    while (tiempoAcumulado < maxTiempo) {
-    	        boolean alguienTieneCanciones = false;
-    	        
-    	        for (IUsuario usuario : usuariosEnCoche) {
-    	            List<ICancion> cancionesUsuario = cancionesPorUsuario.getOrDefault(usuario, List.of());
-    	            int indice = indicesPorUsuario.get(usuario);
-
-    	            if (indice < cancionesUsuario.size()) {
-    	                ICancion cancion = cancionesUsuario.get(indice);
-    	                int duracion = cancion.getDuracion();
-
-    	                if (tiempoAcumulado + duracion > maxTiempo) {
-    	                    return listaGlobal;
-    	                }
-
-    	                listaGlobal.add(cancion.getIdCancion());
-    	                tiempoAcumulado += duracion;
-
-    	                indicesPorUsuario.put(usuario, indice + 1);
-    	                
-    	                alguienTieneCanciones = true;
-    	            }
-    	        }
-    	        // Si todos los índices han llegado al final, reiniciamos
-    	        if (!alguienTieneCanciones) {
-    	            for (IUsuario usuario : usuariosEnCoche) {
-    	                indicesPorUsuario.put(usuario, 0);
-    	            }
-    	        }
-    	        
+    	    
+    	    // Este while se ejecuta cada vez que se recorren todas las canciones y hay que volver a empezar
+    	    while (this.calcularDuracion(cancionesResultado) < maxTiempo) {
+        	    cancionesIntercaladas = intercalarCanciones(cancionesPorUsuario, usuariosEnCoche);
+        	    
+        	    for(ICancion cancion : cancionesIntercaladas) {
+    	    		cancionesResultado.add(cancion);
+    	    		// Se añade una cancion aunque no de tiempo a acabarla
+        	    	if(this.calcularDuracion(cancionesResultado) > maxTiempo)
+        	    		break;
+        	    }
     	    }
+    	    
     	    // Lista con el ID de las canciones que da tiempo a poner
+    	    for(ICancion cancion : cancionesResultado) {
+    	    	listaGlobal.add(cancion.getIdCancion());
+    	    }
     	    return listaGlobal;
     	}
 }
