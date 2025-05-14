@@ -10,9 +10,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
@@ -40,11 +42,35 @@ class ListaReproduccionTest {
         return Stream.of(
             Arguments.of("00:00", 0),
             Arguments.of("00:01", 1),
-            Arguments.of("01:00", 60),
+            Arguments.of("1:00", 60),
             Arguments.of("02:30", 150),
             Arguments.of("10:00", 600),
             Arguments.of("59:59", 3599),
-            Arguments.of("90:00", 5400)
+            Arguments.of("90:00", 5400),
+            Arguments.of("120:00", 7200)
+        );
+    }
+    
+    @ParameterizedTest(name = "Formato inválido: \"{0}\"")
+    @MethodSource("casosInvalidos")
+    @Tag("Sprint1")
+    @DisplayName("Subprueba 1.1: Manejo de formatos inválidos")
+    void testStringASegundos_Invalido(String input) {
+        IListaReproduccion lista = new ListaReproduccion();
+        assertThrows(Exception.class, () -> {
+            lista.stringASegundos(input);
+        }, "Se esperaba una excepción para la entrada inválida: " + input);
+    }
+
+    static Stream<String> casosInvalidos() {
+        return Stream.of(
+            "",              // vacío
+            "abc",           // texto sin número
+            "12",            // sin segundos
+            "12:xx",         // segundos inválidos
+            "12:60",         // segundos fuera de rango (aunque lo acepta como int)
+            "12:30:45",      // más de dos partes
+            null             // null pointer
         );
     }
 
@@ -69,8 +95,8 @@ class ListaReproduccionTest {
     @ParameterizedTest(name = "Caso {index}: duración total = {2} <= {1}")
     @MethodSource("casosDuracion")
     @Tag("Sprint1")
-    @DisplayName("Prueba 2: Duración total no excede el máximo")
-    void testDuracionMaxima(List<Integer> duraciones, String tiempoMaximoStr, int duracionEsperada) {
+    @DisplayName("Prueba 2: Duración total de una lista de canciones")
+    void testDuracionMaxima(List<Integer> duraciones, int duracionEsperada) {
         IListaReproduccion lista = new ListaReproduccion();
 
         List<ICancion> canciones = new ArrayList<>();
@@ -80,34 +106,45 @@ class ListaReproduccionTest {
             canciones.add(c);
         }
         
-        int maxTiempo = lista.stringASegundos(tiempoMaximoStr);
-
         int duracionTotal = lista.calcularDuracion(canciones); 
 
         assertEquals(duracionEsperada, duracionTotal, "La duración total calculada no coincide con la esperada");
-        assertTrue(duracionTotal <= maxTiempo, "La duración total no debe exceder el tiempo máximo");
     }
     static Stream<Arguments> casosDuracion() {
         return Stream.of(
-            Arguments.of(Arrays.asList(1200, 1200, 1199), "60:00", 3599),  // 59:59
-            Arguments.of(Arrays.asList(1800, 1800, 1800), "90:00", 5400),        // 90:00 exactos
-            Arguments.of(Arrays.asList(), "60:00", 0)                            // Lista vacía
+            Arguments.of(Arrays.asList(1200, 1200, 1199), 3599),  		// 59:59
+            Arguments.of(Arrays.asList(1800, 1800, 1800), 5400),        // 90:00
+            Arguments.of(Arrays.asList(0, 0, 0), 0),        			// 00:00, canciones sin duración
+            Arguments.of(Arrays.asList(), 0)                           	// Lista vacía
         );
     }
-
-    @Test
+    
+    @ParameterizedTest
+    @MethodSource("casosDeIntercalado")
     @Tag("Sprint1")
-    @DisplayName("Prueba 3: Orden correcto de intercalado")
-    void testOrdenIntercalado() {
-        IListaReproduccion lista = new ListaReproduccion();
+    @DisplayName("Prueba 3: Intercalado correcto de canciones")
+    void testIntercalado(Map<IUsuario, List<ICancion>> listasUsuarios, Set<IUsuario> usuariosEnCoche, List<Integer> listaEsperada) {
         
+    	IListaReproduccion lista = new ListaReproduccion();
+        List<ICancion> cancionesGeneradas = lista.intercalarCanciones(listasUsuarios, usuariosEnCoche);
+
+        List<Integer> listaGenerada = cancionesGeneradas.stream()
+                .map(ICancion::getIdCancion)
+                .collect(Collectors.toList());
+
+        assertEquals(listaEsperada, listaGenerada, "La lista generada no es la esperada");
+    }
+
+    static Stream<Arguments> casosDeIntercalado() {
+        // Usuarios
         IUsuario u1 = mock(IUsuario.class);
         IUsuario u2 = mock(IUsuario.class);
         IUsuario u3 = mock(IUsuario.class);
         IUsuario u4 = mock(IUsuario.class);
 
-        ICancion c1 = mock(ICancion.class); when(c1.getIdCancion()).thenReturn(1);  when(c1.getDuracion()).thenReturn(60);
-        ICancion c2 = mock(ICancion.class); when(c2.getIdCancion()).thenReturn(6);  when(c2.getDuracion()).thenReturn(60);
+        // Canciones
+        ICancion c1 = mock(ICancion.class); when(c1.getIdCancion()).thenReturn(1); when(c1.getDuracion()).thenReturn(60); 
+        ICancion c2 = mock(ICancion.class); when(c2.getIdCancion()).thenReturn(6); when(c2.getDuracion()).thenReturn(60); 
         ICancion c3 = mock(ICancion.class); when(c3.getIdCancion()).thenReturn(21); when(c3.getDuracion()).thenReturn(60);
         ICancion c4 = mock(ICancion.class); when(c4.getIdCancion()).thenReturn(36); when(c4.getDuracion()).thenReturn(60);
         ICancion c5 = mock(ICancion.class); when(c5.getIdCancion()).thenReturn(2);  when(c5.getDuracion()).thenReturn(60);
@@ -115,65 +152,174 @@ class ListaReproduccionTest {
         ICancion c7 = mock(ICancion.class); when(c7.getIdCancion()).thenReturn(22); when(c7.getDuracion()).thenReturn(60);
         ICancion c8 = mock(ICancion.class); when(c8.getIdCancion()).thenReturn(37); when(c8.getDuracion()).thenReturn(60);
 
-        Map<IUsuario, List<ICancion>> listasUsuarios = new LinkedHashMap<>(); // Linked para mantener el orden
-        listasUsuarios.put(u1, List.of(c1, c5));
-        listasUsuarios.put(u2, List.of(c2, c6));
-        listasUsuarios.put(u3, List.of(c3, c7));
-        listasUsuarios.put(u4, List.of(c4, c8));
-        
-        Set<IUsuario> usuarios = listasUsuarios.keySet();
-
-        List<ICancion> cancionesGeneradas = lista.intercalarCanciones(listasUsuarios, usuarios);
-        List<Integer> listaGenerada = new ArrayList<>();
-        for(ICancion cancion : cancionesGeneradas) {
-        	listaGenerada.add(cancion.getIdCancion());
-        }
-
-        List<Integer> listaEsperada = Arrays.asList(1, 6, 21, 36, 2, 7, 22, 37);
-
-        assertEquals(listaEsperada, listaGenerada, "La lista de IDs no intercala las canciones por usuarios");
-      
+        return Stream.of(
+                // 1. Usuarios con una canción cada uno
+                Arguments.of(
+                    new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                        put(u1, List.of(c1));
+                        put(u2, List.of(c2));
+                        put(u3, List.of(c3));
+                    }},
+                    new LinkedHashSet<>(List.of(u1, u2, u3)),                    
+                    List.of(1, 6, 21)
+                ),
+                // 2. Usuarios con dos canciones cada uno
+                Arguments.of(
+                    new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                        put(u1, List.of(c1, c5));
+                        put(u2, List.of(c2, c6));
+                        put(u3, List.of(c3, c7));
+                        put(u4, List.of(c4, c8));
+                    }},
+                    new LinkedHashSet<>(List.of(u1, u2, u3, u4)),
+                    List.of(1, 6, 21, 36, 2, 7, 22, 37)
+                ),
+                // 3. Usuarios con diferentes numeros de canciones
+                Arguments.of(
+	                new LinkedHashMap<IUsuario, List<ICancion>>() {{
+	                    put(u1, List.of(c1, c4, c7));
+	                    put(u2, List.of(c2));
+	                    put(u3, List.of(c3, c6, c8)); // Solo una canción
+	                }},
+	                new LinkedHashSet<>(List.of(u1, u2, u3)),
+	                List.of(1, 6, 21, 36, 7, 22, 37)
+                ),
+                // 4. Usuarios sin canciones
+                Arguments.of(
+                    new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                        put(u1, List.of());
+                        put(u2, List.of());
+                        put(u3, List.of());
+                    }},
+                    new LinkedHashSet<>(List.of(u1, u2, u3)),
+                    List.of()
+                ),
+                // 5. Usuarios con y sin canciones
+                Arguments.of(
+                    new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                        put(u1, List.of(c1));
+                        put(u2, List.of());
+                        put(u3, List.of(c3));
+                    }},
+                    new LinkedHashSet<>(List.of(u1, u2, u3)),
+                    List.of(1, 21)
+                ),
+                // 6. Uno de los usuarios no está en el coche
+                Arguments.of(
+                    new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                        put(u1, List.of(c1, c5));
+                        put(u2, List.of(c2, c6));
+                        put(u3, List.of(c3, c7));
+                    }},
+                    new LinkedHashSet<>(List.of(u1, u2)), // u3 no está en el coche
+                    List.of(1, 6, 2, 7)
+                ),
+                // 7. usuariosEnCoche == null (se deben usar todos)
+                Arguments.of(
+                    new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                        put(u1, List.of(c1));
+                        put(u2, List.of(c2));
+                    }},
+                    null,
+                    List.of(1, 6)
+                ),
+                // 8. Lista vacía de usuarios
+                Arguments.of(
+                    new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                        // vacío
+                    }},
+                    new LinkedHashSet<>(List.of()),
+                    List.of()
+                ),
+                // 9. listasUsuarios == null
+                Arguments.of(
+                    null,
+                    null,
+                    List.of()
+                )
+            );
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("casosDeDuracion")
     @Tag("Sprint1")
     @DisplayName("Prueba 4: Reinicio del ciclo cuando se acaban las canciones")
-    void testReinicioCiclo() {
-        IListaReproduccion lista = new ListaReproduccion();
-        Map<IUsuario, List<ICancion>> listasUsuarios = new HashMap<>();
+    void testCicloDuracion(Map<IUsuario, List<ICancion>> listasUsuarios, int maxTiempo, int cancionesEscuchadas, int llamadaPorCancion) {
 
-        // Mocks con solo 1 canción por usuario
-        for (int i = 0; i < 3; i++) {
-            IUsuario usuario =mock(IUsuario.class);
-            ICancion cancion = mock(ICancion.class);
-            when(cancion.getDuracion()).thenReturn(30);
-            when(cancion.getIdCancion()).thenReturn(i + 1);
-            listasUsuarios.put(usuario, List.of(cancion));
-        }
+    	IListaReproduccion lista = new ListaReproduccion();
+        
         Set<IUsuario> usuarios = listasUsuarios.keySet();
-        int maxTiempo = 180;
 
         // Se simula la lectura del csv manualmente aquí
         List<ICancion> listaFinal = new ArrayList<>();
         while (lista.calcularDuracion(listaFinal) < maxTiempo) {
             List<ICancion> intercalado = lista.intercalarCanciones(listasUsuarios, usuarios);
             for (ICancion c : intercalado) {
-                if (lista.calcularDuracion(listaFinal) + c.getDuracion() <= maxTiempo) {
-                	listaFinal.add(c);
-                }
+                listaFinal.add(c);
+                if (lista.calcularDuracion(listaFinal) > maxTiempo)
+                	break;
             }
         }
         
-        // Esperamos al menos dos vueltas completas: 3 canciones por vuelta
-        assertTrue(listaFinal.size() >= 6, "Se esperaban al menos dos vueltas completas en la lista de reproducción.");
+        // Esperamos dos vueltas completas: 3 canciones por vuelta
+        assertEquals(listaFinal.size(), cancionesEscuchadas, "Se esperaban más vueltas completas en la lista de reproducción.");
         
         // Verificar que getDuracion() se llamó al menos dos veces por canción
         for (List<ICancion> canciones : listasUsuarios.values()) {
             for (ICancion cancion : canciones) {
-                verify(cancion, atLeast(2)).getDuracion();
+                verify(cancion, atLeast(llamadaPorCancion)).getDuracion();
             }
         }
     }
+
+    static Stream<Arguments> casosDeDuracion() {
+        IUsuario u1 = mock(IUsuario.class);
+        IUsuario u2 = mock(IUsuario.class);
+        IUsuario u3 = mock(IUsuario.class);
+
+        ICancion c1 = mock(ICancion.class); when(c1.getDuracion()).thenReturn(30); when(c1.getIdCancion()).thenReturn(1);
+        ICancion c2 = mock(ICancion.class); when(c2.getDuracion()).thenReturn(30); when(c2.getIdCancion()).thenReturn(2);
+        ICancion c3 = mock(ICancion.class); when(c3.getDuracion()).thenReturn(30); when(c3.getIdCancion()).thenReturn(3);
+
+        return Stream.of(
+            // Caso 1: duración total menor a tiempo máximo (no se reinician)
+            Arguments.of(
+                new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                    put(u1, List.of(c1));
+                    put(u2, List.of(c2));
+                    put(u3, List.of(c3));
+                }},
+                80, // maxTiempo
+                3,   // canciones en la lista final (incluyendo repetidas)
+                1    // llamadas a getDuracion() de cada cancion (no repite)
+            ),
+
+            // Caso 2: duración ligeramente mayor (una vuelta y algunas repeticiones)
+            Arguments.of(
+                new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                    put(u1, List.of(c1));
+                    put(u2, List.of(c2));
+                    put(u3, List.of(c3));
+                }},
+                180,
+                6,
+                2 
+            ),
+
+            // Caso 3: duración mucho mayor (varias repeticiones)
+            Arguments.of(
+                new LinkedHashMap<IUsuario, List<ICancion>>() {{
+                    put(u1, List.of(c1));
+                    put(u2, List.of(c2));
+                    put(u3, List.of(c3));
+                }},
+                450,
+                15,
+                5 
+            )
+        );
+    }
+
 
 	@ParameterizedTest(name = "Duración máxima: {0}")
     @MethodSource("casosDePrueba")

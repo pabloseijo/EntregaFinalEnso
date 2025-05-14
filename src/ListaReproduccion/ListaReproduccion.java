@@ -22,10 +22,20 @@ public class ListaReproduccion implements IListaReproduccion {
 	@Override
 	public int stringASegundos(String duracion) {
 		// Solo admite tiempo en formato "mm:ss"
-		String[] partesDuracion = duracion.split(":");
-        int minutos = Integer.parseInt(partesDuracion[0]);
-        int segundos = Integer.parseInt(partesDuracion[1]);
-        return minutos * 60 + segundos;
+        try {
+            if (duracion == null || !duracion.matches("\\d{1,}:\\d{2}")) {
+                throw new IllegalArgumentException("Formato inválido");
+            }
+            String[] partes = duracion.split(":");
+            int minutos = Integer.parseInt(partes[0]);
+            int segundos = Integer.parseInt(partes[1]);
+            if (segundos >= 60) {
+                throw new IllegalArgumentException("Segundos fuera de rango");
+            }
+            return minutos * 60 + segundos;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error en formato de duración", e);
+        }
 	}
 
 	@Override
@@ -84,14 +94,34 @@ public class ListaReproduccion implements IListaReproduccion {
 
         return resultado;
     }
+	
+	@Override
+	public int calcularDuracion(List<ICancion> canciones) {
+	    if (canciones == null) {
+	        throw new IllegalArgumentException("La lista de canciones no puede ser null");
+	    }
+		
+		int duracion = 0;
+		for(ICancion cancion : canciones) {
+			duracion += cancion.getDuracion();
+		}
+		
+		return duracion;
+	}
 
 	@Override
 	public List<ICancion> intercalarCanciones(Map<IUsuario, List<ICancion>> listasUsuario, Set<IUsuario> usuariosEnCoche){
 	    // Lista que almacenará el resultado de una "ronda" de intercalación
 		List<ICancion> cancionesIntercaladas = new ArrayList<>();
+		
+		// Si no se pasan listas de canciones de cada usuario, se devuelve una lista vacía.
+		if(listasUsuario == null || listasUsuario.isEmpty()) {
+			return cancionesIntercaladas;
+		}
+
 	    // Mapa que mantiene el índice actual de cada usuario (cuántas canciones suyas ya se han intercalado)
 		Map<IUsuario, Integer> indicesPorUsuario = new HashMap<>();
-	    
+		
 	    // Si no se especifican los usuarios, se usan todos los del CSV
 	    if(usuariosEnCoche == null || usuariosEnCoche.isEmpty()) {
 			usuariosEnCoche = listasUsuario.keySet();
@@ -127,16 +157,6 @@ public class ListaReproduccion implements IListaReproduccion {
 		    }	
 	    }
 	    return cancionesIntercaladas;
-	}
-		
-	@Override
-	public int calcularDuracion(List<ICancion> canciones) {
-		int duracion = 0;
-		for(ICancion cancion : canciones) {
-			duracion += cancion.getDuracion();
-		}
-		
-		return duracion;
 	}
 	
 	@Override
