@@ -338,5 +338,146 @@ class ListaReproduccionTest {
             Arguments.of("90:00", Arrays.asList(1, 6, 21, 36, 2, 7, 22, 37, 3, 8, 23, 38, 4, 9, 24, 39, 5, 10, 25, 40, 11, 26, 41, 12, 27, 42, 13))
         );
     }
+
+    // ————————————————
+	// Pruebas parametrizadas Sprint2
+	// ————————————————
+	
+	@ParameterizedTest(name = "Filtrar: rango [{1}-{2}] seg → {3}")
+	@MethodSource("casosFiltrarPorDuracion")
+	@Tag("Sprint2")
+	@DisplayName("Prueba FiltrarPorDuracion (parametrizada)")
+	void testFiltrarPorDuracion_Param(
+	        List<ICancion> input,
+	        int minSeg,
+	        int maxSeg,
+	        List<ICancion> esperado) {
+	    IListaReproduccion lista = new ListaReproduccion();
+	    List<ICancion> actual = lista.filtrarPorDuracion(input, minSeg, maxSeg);
+	    assertEquals(esperado, actual);
+	}
+
+	static Stream<Arguments> casosFiltrarPorDuracion() {
+	    // mocks para reuse
+	    ICancion a = mock(ICancion.class); when(a.getDuracion()).thenReturn( 50);
+	    ICancion b = mock(ICancion.class); when(b.getDuracion()).thenReturn( 90);
+	    ICancion c = mock(ICancion.class); when(c.getDuracion()).thenReturn(150);
+	    ICancion d = mock(ICancion.class); when(d.getDuracion()).thenReturn(180);
+	    ICancion e = mock(ICancion.class); when(e.getDuracion()).thenReturn(200);
+
+	    List<ICancion> listaBase = Arrays.asList(a, b, c, d, e);
+
+	    return Stream.of(
+	        // caso null
+	        Arguments.of(null,  0, 100, List.of()),
+	        // todo fuera de rango
+	        Arguments.of(listaBase, 300, 400, List.of()),
+	        // algunos dentro: [minSeg, maxSeg]
+	        Arguments.of(listaBase,  90, 180, Arrays.asList(b, c, d)),
+	        // incluir exactos en los límites
+	        Arguments.of(listaBase,  50, 200, Arrays.asList(a, b, c, d, e))
+	    );
+	}
+
+
+	@ParameterizedTest(name = "Ordenar {1} sobre {0} → {2}")
+	@MethodSource("casosOrdenarPorDuracion")
+	@Tag("Sprint2")
+	@DisplayName("Prueba ordenarPorDuracion (parametrizada)")
+	void testOrdenarPorDuracion_Param(
+	        List<ICancion> input,
+	        String orden,
+	        List<ICancion> esperado) {
+	    IListaReproduccion lista = new ListaReproduccion();
+	    List<ICancion> actual = lista.ordenarPorDuracion(input, orden);
+	    assertEquals(esperado, actual);
+	}
+
+	static Stream<Arguments> casosOrdenarPorDuracion() {
+	    // mocks de nuevo
+	    ICancion a = mock(ICancion.class); when(a.getDuracion()).thenReturn(100);
+	    ICancion b = mock(ICancion.class); when(b.getDuracion()).thenReturn(200);
+	    ICancion c = mock(ICancion.class); when(c.getDuracion()).thenReturn(300);
+
+	    List<ICancion> base = Arrays.asList(a, b, c);
+	    List<ICancion> inversa = Arrays.asList(c, b, a);
+	    List<ICancion> desorden = Arrays.asList(b, c, a);
+
+	    return Stream.of(
+	        // null → vacío
+	        Arguments.of(null,       "asc",  List.of()),
+	        // ascendente
+	        Arguments.of(desorden,   "asc",  base),
+	        // descendente
+	        Arguments.of(desorden,   "desc", inversa),
+	        // orden no reconocido → misma lista
+	        Arguments.of(desorden,   "foo",  desorden)
+	    );
+	}
+	
+    @Test
+    @Tag("Sprint2")
+    @DisplayName("Integración: CSV → filtrarPorDuracion → ordenarPorDuracion (asc)")
+    void testIntegracion_FiltrarYOrdenarAsc() {
+        IListaReproduccion lista = new ListaReproduccion();
+
+        // 1) Cargo el CSV real
+        Map<IUsuario, List<ICancion>> porUsuario =
+            lista.generarListasPorUsuario("src/resources/discos_usuarios.csv");
+
+        // 2) Aplano en una única lista
+        List<ICancion> todas = porUsuario.values().stream()
+            .flatMap(List::stream)
+            .collect(Collectors.toList());
+
+        // 3) Filtro entre 170s (2:50) y 180s (3:00)
+        int minSeg = 170, maxSeg = 180;
+        List<ICancion> filtradas = lista.filtrarPorDuracion(todas, minSeg, maxSeg);
+
+        // Compruebo que todas las duraciones estén en el rango
+        assertFalse(filtradas.isEmpty(), "Debe haber al menos una canción en ese rango");
+        for (ICancion c : filtradas) {
+            int d = c.getDuracion();
+            assertTrue(d >= minSeg && d <= maxSeg,
+                "Duración fuera de rango: " + d + "s");
+        }
+
+        // 4) Ordeno ascendente
+        List<ICancion> asc = lista.ordenarPorDuracion(filtradas, "asc");
+
+        // Verifico que quede estrictamente no decreciente
+        for (int i = 0; i < asc.size() - 1; i++) {
+            int d1 = asc.get(i).getDuracion();
+            int d2 = asc.get(i + 1).getDuracion();
+            assertTrue(d1 <= d2,
+                String.format("No está ascendente: %ds > %ds en %d→%d", d1, d2, i, i + 1));
+        }
+    }
+
+    @Test
+    @Tag("Sprint2")
+    @DisplayName("Integración: CSV → ordenarPorDuracion (desc)")
+    void testIntegracion_SoloOrdenarDesc() {
+        IListaReproduccion lista = new ListaReproduccion();
+
+        // Cargo y aplano
+        Map<IUsuario, List<ICancion>> porUsuario =
+            lista.generarListasPorUsuario("src/resources/discos_usuarios.csv");
+        List<ICancion> todas = porUsuario.values().stream()
+            .flatMap(List::stream)
+            .collect(Collectors.toList());
+
+        // Ordeno descendente
+        List<ICancion> desc = lista.ordenarPorDuracion(todas, "desc");
+
+        // Verifico que quede no creciente
+        for (int i = 0; i < desc.size() - 1; i++) {
+            int d1 = desc.get(i).getDuracion();
+            int d2 = desc.get(i + 1).getDuracion();
+            assertTrue(d1 >= d2,
+                String.format("No está descendente: %ds < %ds en %d→%d", d1, d2, i, i + 1));
+        }
+    }
+
 	
 }
