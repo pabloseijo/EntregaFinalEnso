@@ -1,4 +1,4 @@
-package Autor;
+package autor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -18,7 +18,7 @@ import album.IAlbum;
 import autor.Autor;
 
 @Tag("Sprint1")
-@DisplayName("Prueba 4: Registro de nuevos autores")
+@DisplayName("Prueba 4: Registro álbum de nuevos autores")
 class AutorTest {
 
     @ParameterizedTest(name = "Subprueba 4.1.{index}: álbum = {0}")
