@@ -18,12 +18,12 @@ import album.IAlbum;
 import autor.Autor;
 
 @Tag("Sprint1")
-@DisplayName("Prueba 4: Registro álbum de nuevos autores")
+@DisplayName("Prueba 5: Registro álbum de nuevos autores")
 class AutorTest {
 
-    @ParameterizedTest(name = "Subprueba 4.1.{index}: álbum = {0}")
+    @ParameterizedTest(name = "Subprueba 5.1.{index}: álbum = {0}")
     @MethodSource("casosEntradasInvalidas")
-    @DisplayName("Subprueba 4.1: Manejo de entradas inválidas")
+    @DisplayName("Subprueba 5.1: Manejo de entradas inválidas")
     void subprueba_4_1_entradasInvalidas(IAlbum album, String mensajeEsperado) {
         Autor autor = new Autor(1, "Autor Ejemplo");
         IllegalArgumentException ex = assertThrows(
@@ -45,9 +45,9 @@ class AutorTest {
         );
     }
 
-    @ParameterizedTest(name = "Subprueba 4.2.{index}: distintos={0}, duplicados={1} → total={2}")
+    @ParameterizedTest(name = "Subprueba 5.2.{index}: distintos={0}, duplicados={1} → total={2}")
     @MethodSource("casosRegistroValido")
-    @DisplayName("Subprueba 4.2: Registro de álbumes válidos")
+    @DisplayName("Subprueba 5.2: Registro de álbumes válidos")
     void subprueba_4_2_registroValido(int distintos, int duplicados, int esperado) {
         Autor autor = new Autor(1, "Autor Ejemplo");
 
