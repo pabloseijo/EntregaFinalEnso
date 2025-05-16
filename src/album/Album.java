@@ -58,41 +58,4 @@ public class Album implements IAlbum {
         return Collections.unmodifiableList(canciones);
     }
     
-    @Override
-    public void ordenarCancionesPorDuracionAscendente() {
-        canciones.sort(Comparator.comparingInt(ICancion::getDuracion));
-    }
-
-    @Override
-    public boolean eliminarCancionPorId(int idCancion) {
-        return canciones.removeIf(c -> c.getIdCancion() == idCancion);
-    }
-
-    @Override
-    public int contarCancionesPorDuracionMayorA(int segundos) {
-        if (segundos < 0) {
-            throw new IllegalArgumentException("El tiempo debe ser no negativo.");
-        }
-        return (int) canciones.stream()
-                .filter(c -> c.getDuracion() > segundos)
-                .count();
-    }
-
-    @Override
-    public List<ICancion> obtenerCancionesDelAutor(String nombreAutor) {
-        if (!this.autor.getNombre().equalsIgnoreCase(nombreAutor)) {
-            return List.of(); 
-        }
-        return getCanciones();
-    }
-
-    @Override
-    public double getDuracionMediaCanciones() {
-        if (canciones.isEmpty()) return 0.0;
-        return canciones.stream()
-            .mapToInt(ICancion::getDuracion)
-            .average()
-            .orElse(0.0);
-    }
-    
 }
